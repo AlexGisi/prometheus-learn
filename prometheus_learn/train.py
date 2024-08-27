@@ -83,9 +83,6 @@ model = EvalModel(weights_initial).to(DEVICE)
 optimizer = optim.SGD(model.parameters(), lr=LR)
 criterion = nn.MSELoss()
 
-writer = SummaryWriter(run_dir_fp)
-print(f"Writing tensorboard log to {run_dir_fp}")
-
 
 def train(model_, optimizer_, train_loader_, val_loader_):
     model_.train()
@@ -115,39 +112,43 @@ def train(model_, optimizer_, train_loader_, val_loader_):
     return model_, optimizer_, avg_train_loss, avg_val_loss
 
 
-start = time.monotonic()
-for epoch in range(EPOCHS):
-    model, optimizer, train_loss, val_loss = train(model, optimizer, train_loader, val_loader)
+if __name__ == '__main__':
+    writer = SummaryWriter(run_dir_fp)
+    print(f"Writing tensorboard log to {run_dir_fp}")
 
-    writer.add_scalar("Loss/train", train_loss, epoch)
-    writer.add_scalar("Loss/validation", val_loss, epoch)
-    for name, param in model.named_parameters():
-        writer.add_histogram("param/" + name, param.cpu(), epoch)
-        writer.add_histogram("grad/" + name, param.grad.cpu(), epoch)
+    start = time.monotonic()
+    for epoch in range(EPOCHS):
+        model, optimizer, train_loss, val_loss = train(model, optimizer, train_loader, val_loader)
 
-    print(
-        f"Epoch {epoch+1}/{EPOCHS}, Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}"
-    )
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/validation", val_loss, epoch)
+        for name, param in model.named_parameters():
+            writer.add_histogram("param/" + name, param.cpu(), epoch)
+            writer.add_histogram("grad/" + name, param.grad.cpu(), epoch)
 
-    # For loading see https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-a-general-checkpoint-for-inference-and-or-resuming-training
-    if (epoch+1) % CHECKPOINT_PERIOD == 0:
-        dir = os.path.join(run_dir_fp, 'checkpoints')
-        if not os.path.exists(dir):
-            os.mkdir(dir)
+        print(
+            f"Epoch {epoch+1}/{EPOCHS}, Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}"
+        )
 
-        fp = os.path.join(dir, f'epoch-{epoch}.tar')
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimzer_state_dict': optimizer.state_dict(),
-            'train_loss': train_loss,
-            'val_loss': val_loss,
-        }, fp)
+        # For loading see https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-a-general-checkpoint-for-inference-and-or-resuming-training
+        if (epoch+1) % CHECKPOINT_PERIOD == 0:
+            dir = os.path.join(run_dir_fp, 'checkpoints')
+            if not os.path.exists(dir):
+                os.mkdir(dir)
 
-        weights_to_file(table_names, model.weights.detach().cpu(), fp=os.path.join(dir, 'weights.txt'))
+            fp = os.path.join(dir, f'epoch-{epoch}.tar')
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimzer_state_dict': optimizer.state_dict(),
+                'train_loss': train_loss,
+                'val_loss': val_loss,
+            }, fp)
 
-end = time.monotonic()
-print("Training finished in " + str(end-start) + " seconds")
+            weights_to_file(table_names, model.weights.detach().cpu(), fp=os.path.join(dir, 'weights.txt'))
 
-writer.close()
-weights_to_file(table_names, model.weights.detach().cpu(), fp=weights_final_fp)
+    end = time.monotonic()
+    print("Training finished in " + str(end-start) + " seconds")
+
+    writer.close()
+    weights_to_file(table_names, model.weights.detach().cpu(), fp=weights_final_fp)
