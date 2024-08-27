@@ -1,3 +1,5 @@
+from datetime import datetime
+import time
 import os
 import pandas as pd
 import torch
@@ -14,16 +16,18 @@ from util import weights_from_file, weights_to_file
 
 ###----------
 
-LR = 1e-3
-BATCH_SIZE = 32
-TEST_SPLIT = 0.2
-EPOCHS = 100
+LR = 1e-1
+BATCH_SIZE = 64
+TEST_SPLIT = 0.15
+EPOCHS = 100_000
 DTYPE = torch.float32
 NP_DTYPE = np.float32
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+CHECKPOINT_PERIOD = 5000
 
-RUN_DIR = "../runs/test1"
+RUN_DIR = "../runs/" + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 WEIGHTS_INITIAL_FP = "../io/weights_initial.txt"
+WEIGHTS_FINAL_FP = "../io/weights_final.txt"
 DATA_FP = "../data/balanced_positions_with_vecs_test.csv"
 
 ###----------
@@ -31,12 +35,22 @@ DATA_FP = "../data/balanced_positions_with_vecs_test.csv"
 weights_initial_fp = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), WEIGHTS_INITIAL_FP)
 )
+weights_final_fp = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), WEIGHTS_FINAL_FP)
+)
 data_fp = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), DATA_FP)
 )
 run_dir_fp = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), RUN_DIR)
 )
+
+print(f"Using device {DEVICE}.")
+
+os.mkdir(run_dir_fp)
+with open(__file__, 'r') as f_read:
+    with open(os.path.join(run_dir_fp, 'train.py'), 'w') as f_write:
+        f_write.write(f_read.read())
 
 print("Loading data...")
 data = []
@@ -48,8 +62,8 @@ for index, row in data_df.iterrows():
     ]
     data.append(position_vector)
 
-X = torch.tensor(data, dtype=DTYPE)
-Y = torch.tensor(data_df["result"].values, dtype=DTYPE)
+X = torch.tensor(data, dtype=DTYPE, device=DEVICE)
+Y = torch.tensor(data_df["result"].values, dtype=DTYPE, device=DEVICE)
 
 print(f"Data loaded: X has shape {X.shape} and Y has shape {Y.shape}.")
 X_train, X_val, y_train, y_val = train_test_split(
@@ -63,47 +77,77 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 table_names, weights_initial_np = weights_from_file(weights_initial_fp, dtype=NP_DTYPE)
-weights_initial = torch.from_numpy(weights_initial_np)
-model = EvalModel(weights_initial)
+weights_initial = torch.from_numpy(weights_initial_np).to(DEVICE)
+model = EvalModel(weights_initial).to(DEVICE)
 
 optimizer = optim.SGD(model.parameters(), lr=LR)
 criterion = nn.MSELoss()
 
 writer = SummaryWriter(run_dir_fp)
-print(f"Writing tensorboad log to {run_dir_fp}")
+print(f"Writing tensorboard log to {run_dir_fp}")
 
-for epoch in range(EPOCHS):
-    model.train()
+
+def train(model_, optimizer_, train_loader_, val_loader_):
+    model_.train()
     running_loss = 0.0
-    for i, (inputs, targets) in enumerate(train_loader):
-        optimizer.zero_grad()
-        outputs = model(inputs)
+    for inputs, targets in train_loader_:
+        inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+        optimizer_.zero_grad()
+        outputs = model_(inputs)
         loss = criterion(outputs.squeeze(), targets)
         loss.backward()
-        optimizer.step()
+        optimizer_.step()
 
         running_loss += loss.item()
 
-    avg_train_loss = running_loss / len(train_loader)
-    writer.add_scalar("Loss/train", avg_train_loss, epoch)
+    avg_train_loss = running_loss / len(train_loader_)
 
-    model.eval()
+    model_.eval()
     val_loss = 0.0
     with torch.no_grad():
-        for inputs, targets in val_loader:
-            outputs = model(inputs)
+        for inputs, targets in val_loader_:
+            inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+            outputs = model_(inputs)
             loss = criterion(outputs.squeeze(), targets)
             val_loss += loss.item()
+    avg_val_loss = val_loss / len(val_loader_)
 
-    avg_val_loss = val_loss / len(val_loader)
-    writer.add_scalar("Loss/validation", avg_val_loss, epoch)
+    return model_, optimizer_, avg_train_loss, avg_val_loss
 
+
+start = time.monotonic()
+for epoch in range(EPOCHS):
+    model, optimizer, train_loss, val_loss = train(model, optimizer, train_loader, val_loader)
+
+    writer.add_scalar("Loss/train", train_loss, epoch)
+    writer.add_scalar("Loss/validation", val_loss, epoch)
     for name, param in model.named_parameters():
         writer.add_histogram("param/" + name, param.cpu(), epoch)
         writer.add_histogram("grad/" + name, param.grad.cpu(), epoch)
 
     print(
-        f"Epoch {epoch+1}/{EPOCHS}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}"
+        f"Epoch {epoch+1}/{EPOCHS}, Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}"
     )
 
+    # For loading see https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-a-general-checkpoint-for-inference-and-or-resuming-training
+    if (epoch+1) % CHECKPOINT_PERIOD == 0:
+        dir = os.path.join(run_dir_fp, 'checkpoints')
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+
+        fp = os.path.join(dir, f'epoch-{epoch}.tar')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimzer_state_dict': optimizer.state_dict(),
+            'train_loss': train_loss,
+            'val_loss': val_loss,
+        }, fp)
+
+        weights_to_file(table_names, model.weights.detach().cpu(), fp=os.path.join(dir, 'weights.txt'))
+
+end = time.monotonic()
+print("Training finished in " + str(end-start) + " seconds")
+
 writer.close()
+weights_to_file(table_names, model.weights.detach().cpu(), fp=weights_final_fp)
