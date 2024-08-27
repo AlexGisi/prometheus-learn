@@ -2,3 +2,5 @@ venv/
 io/weights_final.txt
 data/
 test.py
+__pycache__/
+runs/

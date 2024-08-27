@@ -4,6 +4,7 @@ import concurrent.futures
 import csv
 
 
+THREAD_N = 10
 PROMETHEUS_FP = "../bin/prometheus"
 POSITIONS_FP = "../data/balanced_positions.csv"
 OUT_FP = "../data/balanced_positions_with_vecs.csv"
@@ -19,11 +20,12 @@ out_fp = os.path.abspath(
 )
 
 print("Reading positions...")
-with open(positions_fp, 'r', newline='') as f:
+with open(positions_fp, "r", newline="") as f:
     r = csv.DictReader(f)
     positions = list(r)
-    
+
 print(f"Read {len(positions)} positions. Getting vectors...")
+
 
 def get_vec(fen):
     command = [prometheus_fp, "fentovec", fen]
@@ -36,21 +38,27 @@ def get_vec(fen):
         return (output[0], output[1])
     else:
         raise ValueError(output)
-    
-with concurrent.futures.ThreadPoolExecutor(max_workers=7) as executor:
-    results = list(executor.map(get_vec, [p['fen'] for p in positions]))
-    
-print(f"Got {len(results)} vectors. Writing...")
 
-for pos, vecs in zip(positions, results):
-    pos['white'] = vecs[0]
-    pos['black'] = vecs[1]
-    
-breakpoint()
 
-with open(out_fp, 'w', newline='') as f:
-    writer = csv.DictWriter(f, fieldnames=list(positions[0].keys()))
-    writer.writeheader()
-    writer.writerows(positions)
-    
+BATCH_SIZE = 4096
+total_positions = len(positions)
+batches = [positions[i : i + BATCH_SIZE] for i in range(0, total_positions, BATCH_SIZE)]
+
+for batch_num, batch in enumerate(batches):
+    print(f"Processing batch {batch_num + 1}/{len(batches)}...")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=THREAD_N) as executor:
+        results = list(executor.map(get_vec, [p["fen"] for p in batch]))
+
+    for pos, vecs in zip(batch, results):
+            pos["white"] = vecs[0]
+            pos["black"] = vecs[1]
+            
+    with open(out_fp, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(positions[0].keys()))
+        if batch_num == 0:
+            writer.writeheader()
+        writer.writerows(batch)
+        f.flush()
+
 print(f"Wrote to {out_fp}")

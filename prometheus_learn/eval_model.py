@@ -13,13 +13,18 @@ class EvalModel(nn.Module):
     """
 
     def __init__(self, weights_initial: torch.Tensor):
+        assert weights_initial.size() == torch.Size([384])
+
         super(EvalModel, self).__init__()
         self.weights = nn.Parameter(weights_initial)
-        self.register_buffer("mirror", torch.tensor(get_mirror()))
 
-    def forward(self, white_indices: torch.Tensor, black_indices: torch.Tensor):
-        return torch.sum(
-            torch.cat(
-                self.weights[white_indices], -self.weights[self.mirror[black_indices]]
-            )
-        )
+    def forward(self, x):
+        """
+        Args:
+            x (torch.tensor): weight and black position indicators concatenated, i.e. a 768x1 vector.
+            The black tensor should be mirrored.
+        """
+        weights_full = torch.div(torch.cat([self.weights, -self.weights], dim=0), 100)  # (,768)
+        pawn_evaluation = x @ weights_full  # inner product
+        eval = torch.tanh(pawn_evaluation)
+        return eval

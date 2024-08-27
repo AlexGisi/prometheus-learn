@@ -27,7 +27,7 @@ def get_mirror():
     return mirror
 
 
-def weights_from_file(fp: str) -> tuple[list[str], np.array]:
+def weights_from_file(fp: str, dtype) -> tuple[list[str], np.array]:
     with open(fp, 'r') as f:
         con = f.read()
     
@@ -41,7 +41,7 @@ def weights_from_file(fp: str) -> tuple[list[str], np.array]:
     
     assert len(weights) == (len(names) * 64)
         
-    return names, np.array(weights, dtype=np.float16)
+    return names, np.array(weights, dtype=dtype)
 
 def weights_to_file(names: list[str], weights: list[int], fp: Optional[str]) -> str:
     assert len(weights) == (len(names) * 64)
