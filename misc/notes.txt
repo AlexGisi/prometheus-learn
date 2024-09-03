@@ -1,0 +1,23 @@
+Before ensuring repro:
+
+An important example: this test optimization with 3500 validation epochs
+chose one that decreases more in the beginning but then provides no gain
+past 1000 epochs
+
+Data loaded: X has shape torch.Size([998, 768]) and Y has shape torch.Size([998]).
+[I 2024-08-28 18:37:48,245] A new study created in memory with name: no-name-6fcc0231-dc07-4d09-83ce-22432855b8c7
+[I 2024-08-28 18:38:11,796] Trial 0 finished with value: 0.8878729343414307 and parameters: {'LR': 0.010291137809886105, 'BATCH_SIZE': 256, 'OPTIMIZER': 'Adagrad'}. Best is trial 0 with value: 0.8878729343414307.
+[I 2024-08-28 18:39:03,177] Trial 1 finished with value: 0.8881822427113851 and parameters: {'LR': 0.030736187338339667, 'BATCH_SIZE': 64, 'OPTIMIZER': 'SGD'}. Best is trial 0 with value: 0.8878729343414307.
+[I 2024-08-28 18:39:56,512] Trial 2 finished with value: 0.8457372585932413 and parameters: {'LR': 1.627385263557194, 'BATCH_SIZE': 64, 'OPTIMIZER': 'Adagrad'}. Best is trial 2 with value: 0.8457372585932413.
+[I 2024-08-28 18:40:30,350] Trial 3 finished with value: 1.0460933446884155 and parameters: {'LR': 0.10617158140586697, 'BATCH_SIZE': 128, 'OPTIMIZER': 'RMSprop'}. Best is trial 2 with value: 0.8457372585932413.
+[I 2024-08-28 18:41:22,417] Trial 4 finished with value: 0.7809205055236816 and parameters: {'LR': 1.5552114327446716, 'BATCH_SIZE': 64, 'OPTIMIZER': 'SGD'}. Best is trial 4 with value: 0.7809205055236816.
+[I 2024-08-28 18:41:48,955] Trial 5 finished with value: 0.9149788618087769 and parameters: {'LR': 0.10911331369880621, 'BATCH_SIZE': 256, 'OPTIMIZER': 'Adadelta'}. Best is trial 4 with value: 0.7809205055236816.
+[I 2024-08-28 18:42:46,556] Trial 6 finished with value: 0.9896003603935242 and parameters: {'LR': 7.08521017334395, 'BATCH_SIZE': 64, 'OPTIMIZER': 'Adagrad'}. Best is trial 4 with value: 0.7809205055236816.
+[I 2024-08-28 18:43:13,526] Trial 7 finished with value: 1.0767139196395874 and parameters: {'LR': 0.6291066244323255, 'BATCH_SIZE': 256, 'OPTIMIZER': 'Adam'}. Best is trial 4 with value: 0.7809205055236816.
+[I 2024-08-28 18:44:58,020] Trial 8 finished with value: 0.7017673134803772 and parameters: {'LR': 0.07303840495928955, 'BATCH_SIZE': 32, 'OPTIMIZER': 'AdamW'}. Best is trial 8 with value: 0.7017673134803772.
+[I 2024-08-28 18:46:27,384] Trial 9 finished with value: 0.8462990522384644 and parameters: {'LR': 0.07727602572766416, 'BATCH_SIZE': 32, 'OPTIMIZER': 'SGD'}. Best is trial 8 with value: 0.7017673134803772.
+Study finished in 519.1388696349459s
+Best hyperparameters found:  {'LR': 0.07303840495928955, 'BATCH_SIZE': 32, 'OPTIMIZER': 'AdamW'}
+
+After ensuring repro:
+hyperparamter tuning converged (see results txt).

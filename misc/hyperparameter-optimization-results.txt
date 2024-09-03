@@ -1,0 +1,63 @@
+Best hyperparameters found:  {'LR': 1.7430587927858392, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+Best validation loss:  0.8370771707471357
+Best 10 trials:
+Trial 1:
+  Value: 0.8370771707471357
+  Params: {'LR': 1.7430587927858392, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 738
+  User Attributes: {}
+  State: 1
+Trial 2:
+  Value: 0.83707717307117
+  Params: {'LR': 1.7418723159350828, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 196
+  User Attributes: {}
+  State: 1
+Trial 3:
+  Value: 0.837077173207878
+  Params: {'LR': 1.7479699291566269, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 135
+  User Attributes: {}
+  State: 1
+Trial 4:
+  Value: 0.837077174438249
+  Params: {'LR': 1.7464663367491584, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 396
+  User Attributes: {}
+  State: 1
+Trial 5:
+  Value: 0.8370771785394862
+  Params: {'LR': 1.748127086119811, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 134
+  User Attributes: {}
+  State: 1
+Trial 6:
+  Value: 0.8370771790863177
+  Params: {'LR': 1.7391579958526322, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 340
+  User Attributes: {}
+  State: 1
+Trial 7:
+  Value: 0.8370771818204757
+  Params: {'LR': 1.749176202330089, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 788
+  User Attributes: {}
+  State: 1
+Trial 8:
+  Value: 0.8370771837343863
+  Params: {'LR': 1.73639144750913, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 121
+  User Attributes: {}
+  State: 1
+Trial 9:
+  Value: 0.8370771856482969
+  Params: {'LR': 1.735804213848158, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 299
+  User Attributes: {}
+  State: 1
+Trial 10:
+  Value: 0.8370771937140631
+  Params: {'LR': 1.733004046340361, 'BATCH_SIZE': 128, 'OPTIMIZER': 'Adagrad'}
+  Number: 701
+  User Attributes: {}
+  State: 1

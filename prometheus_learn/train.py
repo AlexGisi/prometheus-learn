@@ -1,6 +1,7 @@
 from datetime import datetime
 import time
 import os
+
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -16,21 +17,25 @@ from util import weights_from_file, weights_to_file
 
 ###----------
 
-LR = 1e-1
-BATCH_SIZE = 64
+LR = 1.74
+BATCH_SIZE = 128
 TEST_SPLIT = 0.15
-EPOCHS = 100_000
+EPOCHS = 100
+OPTIMIZER = 'Adagrad'
 DTYPE = torch.float32
 NP_DTYPE = np.float32
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_PERIOD = 5000
+CHECKPOINT_PERIOD = 5
+SEED = 1337
 
 RUN_DIR = "../runs/" + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 WEIGHTS_INITIAL_FP = "../io/weights_initial.txt"
 WEIGHTS_FINAL_FP = "../io/weights_final.txt"
-DATA_FP = "../data/balanced_positions_with_vecs_test.csv"
+DATA_FP = "../data/balanced_positions_with_vecs.csv"
 
 ###----------
+
+torch.manual_seed(SEED)
 
 weights_initial_fp = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), WEIGHTS_INITIAL_FP)
@@ -80,7 +85,20 @@ table_names, weights_initial_np = weights_from_file(weights_initial_fp, dtype=NP
 weights_initial = torch.from_numpy(weights_initial_np).to(DEVICE)
 model = EvalModel(weights_initial).to(DEVICE)
 
-optimizer = optim.SGD(model.parameters(), lr=LR)
+if OPTIMIZER == 'SGD':
+    optimizer = optim.SGD(model.parameters(), lr=LR)
+elif OPTIMIZER == 'Adam':
+    optimizer = optim.Adam(model.parameters(), lr=LR)
+elif OPTIMIZER == 'RMSprop':
+    optimizer = optim.RMSprop(model.parameters(), lr=LR)
+elif OPTIMIZER == 'Adagrad':
+    optimizer = optim.Adagrad(model.parameters(), lr=LR)
+elif OPTIMIZER == 'Adadelta':
+    optimizer = optim.Adadelta(model.parameters(), lr=LR)
+elif OPTIMIZER == 'AdamW':
+    optimizer = optim.AdamW(model.parameters(), lr=LR)
+else:
+    raise ValueError(f"Optimizer {OPTIMIZER} is not available.")
 criterion = nn.MSELoss()
 
 
@@ -127,7 +145,7 @@ if __name__ == '__main__':
             writer.add_histogram("grad/" + name, param.grad.cpu(), epoch)
 
         print(
-            f"Epoch {epoch+1}/{EPOCHS}, Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}"
+            f"Epoch {epoch+1}/{EPOCHS}\t Train Loss: {train_loss:.8f}\t Validation Loss: {val_loss:.8f}"
         )
 
         # For loading see https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-a-general-checkpoint-for-inference-and-or-resuming-training
@@ -152,3 +170,4 @@ if __name__ == '__main__':
 
     writer.close()
     weights_to_file(table_names, model.weights.detach().cpu(), fp=weights_final_fp)
+    weights_to_file(table_names, model.weights.detach().cpu(), fp=os.path.join(run_dir_fp, 'pst-final.txt'))
